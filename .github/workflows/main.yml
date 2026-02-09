@@ -1,0 +1,94 @@
+name: Postman Collection Workflow
+
+on:
+  push:
+    branches :   [main]
+  workflow_dispatch:
+  schedule :
+  - cron : 30 02 * * * # 8 am IST
+  - cron : 00 14 * * * # 7:30 pm IST
+  - cron : 00 06 * * 1-5 # 11:30 am IST Monday to Friday
+
+jobs:
+    run-postman-tests: 
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout the code
+          uses: actions/checkout@v6.0.2
+          
+        - name: Install Nodejs and npm
+          uses: actions/setup-node@v6.2.0
+          with:
+            node-version: '22'
+
+        - name: Install Newman
+          run: |
+                npm install -g newman
+                npm install -g newman-reporter-htmlextra
+                
+        - name: Run the Postman Collection with newman
+          run: |
+               newman run 'Inwarranty-flow Collection.postman_collection.json' \
+               -e QA.postman_environment.json \
+                -d testData.csv \
+               -r cli,htmlextra \
+               --reporter-htmlextra-export ./newman/index.html
+              
+             
+
+        - name: Newman Report
+          if: always()
+          uses: actions/upload-artifact@v4.6.2
+          with:
+             name: Newman Report
+             path: newman/*.html
+
+        - name: Creating GitHub page branch
+          if: always()
+          uses: peaceiris/actions-gh-pages@v4.0.0
+          with:
+             github_token: ${{ secrets.GITHUB_TOKEN }}
+             publish_dir: newman/
+
+        - name: Send Email Notifications
+          if: always()
+          uses: dawidd6/action-send-mail@v9
+          with: 
+            server_address: smtp.gmail.com
+            server_port: 465
+            username: ${{ secrets.EMAIL_USERNAME }}
+            password: ${{secrets.EMAIL_PASSWORD }}
+            subject: Phoenix Inwarranty Flow Test Execution Notification
+            to: vsandhya.vsm@gmail.com
+            from: ${{ secrets.EMAIL_USERNAME }}
+            body: |
+                  Hi All, 
+
+                  Please find the attached HTML report generated after running the Postman test Collection via
+                  the GitHub Actions, and the URL is: https://sandyvenky.github.io/PHOENIX-INWARRANTY-FLOW/
+                  
+                  
+            
+            
+            
+         
+         
+          
+            
+          
+          
+          
+        
+
+                
+          
+            
+          
+        
+      
+
+  
+  
+
+    
